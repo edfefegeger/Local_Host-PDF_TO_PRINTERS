@@ -40,9 +40,13 @@ def print_file():
         }
 
         # Start printing
-        hJob = win32print.StartDocPrinter(hPrinter, 1, (file_url, None, 'RAW'))
+        hJob = win32print.StartDocPrinter(hPrinter, 1, ('temp_file.pdf', None, 'RAW'))
         win32print.StartPagePrinter(hPrinter)
-        win32print.WritePrinter(hPrinter, response.content)
+
+        # Read the content of the PDF file and write it to the printer
+        with open('temp_file.pdf', 'rb') as pdf_file:
+            win32print.WritePrinter(hPrinter, pdf_file.read())
+
         win32print.EndPagePrinter(hPrinter)
         win32print.EndDocPrinter(hPrinter)
 
