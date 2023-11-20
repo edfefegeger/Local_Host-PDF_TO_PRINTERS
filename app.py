@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import win32print
-import win32con
 import requests
 
 app = Flask(__name__)
@@ -21,6 +20,8 @@ def print_file():
     with open('temp_file.pdf', 'wb') as f:
         f.write(response.content)
 
+    success = False
+
     try:
         # Open the specified printer
         hPrinter = win32print.OpenPrinter(printer_name)
@@ -28,15 +29,8 @@ def print_file():
         # Get the default printer settings
         default_printer_settings = win32print.GetPrinter(hPrinter, 2)['pDevMode']
 
-        # Print some debugging information
-        print("Printer Name:", printer_name)
-        print("Supported Paper Sizes:", default_printer_settings.PaperSize)
-        
         # Set the paper size
         default_printer_settings.PaperSize = getattr(win32print, 'DMPAPER_' + paper_size, default_printer_settings.PaperSize)
-
-        # Print additional debugging information
-        print("Selected Paper Size:", default_printer_settings.PaperSize)
 
         # Set up print data
         print_data = {
@@ -45,15 +39,15 @@ def print_file():
             'pDevMode': default_printer_settings,
         }
 
-        # Print additional debugging information
-        print("Print Data:", print_data)
-
         # Start printing
-        hJob = win32print.StartDocPrinter(hPrinter, 1, ('temp_file.pdf', None, 'RAW'))
+        hJob = win32print.StartDocPrinter(hPrinter, 1, (file_url, None, 'RAW'))
         win32print.StartPagePrinter(hPrinter)
         win32print.WritePrinter(hPrinter, response.content)
         win32print.EndPagePrinter(hPrinter)
         win32print.EndDocPrinter(hPrinter)
+
+        # If code reaches here, consider printing successful
+        success = True
 
     finally:
         # Close the printer handle
@@ -62,7 +56,11 @@ def print_file():
     # Remove the temporary file
     os.remove('temp_file.pdf')
 
-    return jsonify({'status': 'success'})
+    # Check if printing was successful
+    if success:
+        return jsonify({'status': 'success'})
+    else:
+        return jsonify({'status': 'failure'})
 
 if __name__ == '__main__':
     app.run(debug=True)
