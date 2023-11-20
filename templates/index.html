@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Request Form</title>
+</head>
+<body>
+    <h1>Форма запроса на печать</h1>
+    <form action="/print" method="get">
+        <label for="file_url">URL Файла:</label>
+        <input type="text" id="file_url" name="file_url" required>
+        <br>
+        <label for="paper_size">Размер бумаги:</label>
+        <input type="text" id="paper_size" name="paper_size" required>
+        <br>
+        <label for="printer_name">Имя принтера:</label>
+        <input type="text" id="printer_name" name="printer_name" required>
+        <br>
+        <input type="submit" value="Подать запрос на печать">
+    </form>
+</body>
+</html>
