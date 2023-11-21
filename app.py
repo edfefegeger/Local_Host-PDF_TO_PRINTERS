@@ -78,8 +78,8 @@ def print_file():
     else:
         result_message = 'Ошибка при печати'
 
-# Вернуть HTML-страницу с обновленным содержимым div
-    return render_template('index.html', result_message=result_message)
+    # Вернуть HTML-страницу с обновленным содержимым div и информацией о формате бумаги
+    return render_template('index.html', result_message=result_message, paper_size=paper_size)
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False, threaded=True)

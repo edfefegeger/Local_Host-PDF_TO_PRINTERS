@@ -19,7 +19,10 @@
         <input type="text" id="printer_name" name="printer_name" required>
         <br>
         <input type="submit" value="Подать запрос на печать">
-        <div id="print_result">{{ result_message }}</div>
+        <div id="print_result">Результат: {{ result_message }}
+            <p>Формат бумаги: {{ paper_size }}</p>
+        </div>
+        
     </form>
 </body>
 </html>
