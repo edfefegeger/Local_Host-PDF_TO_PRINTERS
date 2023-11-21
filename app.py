@@ -5,7 +5,7 @@ import requests
 import traceback  # Добавленный импорт
 import hashlib
 import urllib.parse
-
+import webbrowser
 app = Flask(__name__)
 
 @app.route('/')
@@ -38,7 +38,7 @@ def print_file():
         default_printer_settings = win32print.GetPrinter(hPrinter, 2)['pDevMode']
 
         # Set the paper size
-        default_printer_settings.PaperSize = getattr(win32print, 'DMPAPER_' + paper_size, default_printer_settings.PaperSize)
+        default_printer_settings.PaperSize = getattr(win32print, paper_size, default_printer_settings.PaperSize)
 
         # Set up print data
         print_data = {
@@ -82,4 +82,8 @@ def print_file():
     return render_template('index.html', result_message=result_message, paper_size=paper_size)
 
 if __name__ == '__main__':
+    # Открываем браузер с локальным хостом после запуска приложения
+    webbrowser.open('http://127.0.0.1:5000/')
+
+    # Запускаем Flask-приложение
     app.run(debug=True, use_reloader=False, threaded=True)
