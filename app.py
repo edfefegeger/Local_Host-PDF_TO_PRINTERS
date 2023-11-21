@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, jsonify
 import os
 import win32print
 import requests
+import traceback  # Добавленный импорт
+import hashlib
+import urllib.parse
 
 app = Flask(__name__)
 
@@ -15,9 +18,14 @@ def print_file():
     paper_size = request.args.get('paper_size')
     printer_name = request.args.get('printer_name')
 
+    # Sanitize URL and create a unique name for the temporary file based on URL and paper size
+    sanitized_url = hashlib.sha256(file_url.encode()).hexdigest()
+    sanitized_url = urllib.parse.quote_plus(sanitized_url)  # Replace problematic characters with URL-safe characters
+    unique_filename = f'temp_file_{sanitized_url}_size_{paper_size}.pdf'
+
     # Download the file
     response = requests.get(file_url)
-    with open('temp_file.pdf', 'wb') as f:
+    with open(unique_filename, 'wb') as f:
         f.write(response.content)
 
     success = False
@@ -40,11 +48,11 @@ def print_file():
         }
 
         # Start printing
-        hJob = win32print.StartDocPrinter(hPrinter, 1, ('temp_file.pdf', None, 'RAW'))
+        hJob = win32print.StartDocPrinter(hPrinter, 1, (unique_filename, None, 'RAW'))
         win32print.StartPagePrinter(hPrinter)
 
         # Read the content of the PDF file and write it to the printer
-        with open('temp_file.pdf', 'rb') as pdf_file:
+        with open(unique_filename, 'rb') as pdf_file:
             win32print.WritePrinter(hPrinter, pdf_file.read())
 
         win32print.EndPagePrinter(hPrinter)
@@ -53,12 +61,16 @@ def print_file():
         # If code reaches here, consider printing successful
         success = True
 
+    except Exception as e:
+        print(f"Error printing: {e}")
+        traceback.print_exc()
+
     finally:
         # Close the printer handle
         win32print.ClosePrinter(hPrinter)
 
     # Remove the temporary file
-    os.remove('temp_file.pdf')
+    os.remove(unique_filename)
 
     # Check if printing was successful
     if success:
@@ -67,4 +79,4 @@ def print_file():
         return jsonify({'status': 'failure'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False, threaded=True)
