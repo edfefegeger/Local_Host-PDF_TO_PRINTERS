@@ -74,9 +74,12 @@ def print_file():
 
     # Check if printing was successful
     if success:
-        return jsonify({'status': 'success'})
+        result_message = 'Успешная печать'
     else:
-        return jsonify({'status': 'failure'})
+        result_message = 'Ошибка при печати'
+
+# Вернуть HTML-страницу с обновленным содержимым div
+    return render_template('index.html', result_message=result_message)
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False, threaded=True)
