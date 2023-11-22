@@ -110,10 +110,6 @@ def print_file():
         traceback.print_exc()
         print_complete_event.set()
 
-    finally:
-        # Закрываем дескриптор принтера в любом случае
-        win32print.ClosePrinter(hPrinter)
-
     # Удаляем временный файл
     os.remove(unique_filename)
 
@@ -121,9 +117,7 @@ def print_file():
     return render_template('index.html', result_message="Печать начата", paper_size=paper_size)
 
 if __name__ == '__main__':
-    # Открываем браузер с локальным хостом после запуска приложения
-    webbrowser.open('http://127.0.0.1:5000/')
-
+    
     # Запускаем Flask-приложение в отдельном потоке
     app_thread = threading.Thread(target=app.run, kwargs={'debug': True, 'use_reloader': False, 'threaded': True})
     app_thread.start()
