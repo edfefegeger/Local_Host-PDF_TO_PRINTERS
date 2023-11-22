@@ -1,17 +1,48 @@
-from flask import Flask, render_template, request, jsonify
+import traceback
+from flask import Flask, render_template, request
 import os
 import win32print
+import win32con
 import requests
-import traceback  # Добавленный импорт
 import hashlib
 import urllib.parse
+import threading
 import webbrowser
+import time
+from PyPDF2 import PdfReader
 
 app = Flask(__name__)
+print_complete_event = threading.Event()
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+def monitor_print_job(hPrinter, hJob):
+    """
+    Мониторит статус печатного задания и дожидается его завершения.
+    """
+    while True:
+        # Получаем информацию о задании
+        job_info = win32print.GetJob(hPrinter, hJob, 2)
+
+        # Проверяем статус задания
+        status = job_info['Status']
+        if status == win32con.JOB_STATUS_COMPLETE:
+            print("Печать завершена успешно")
+            print_complete_event.set()
+            break
+        elif status == win32con.JOB_STATUS_ERROR:
+            print("Ошибка при печати")
+            print_complete_event.set()
+            break
+        elif status == win32con.JOB_STATUS_DELETED:
+            print("Задание удалено")
+            print_complete_event.set()
+            break
+
+        # Пауза перед следующей проверкой статуса
+        time.sleep(1)
 
 @app.route('/print', methods=['GET'])
 def print_file():
@@ -57,15 +88,18 @@ def print_file():
         with open(unique_filename, 'rb') as pdf_file:
             win32print.WritePrinter(hPrinter, pdf_file.read())
 
+        # Завершаем печать
         win32print.EndPagePrinter(hPrinter)
         win32print.EndDocPrinter(hPrinter)
 
-        # Если код дошел до этого момента, считаем печать успешной
-        success = True
+        # Запускаем мониторинг печатного задания в отдельном потоке
+        monitor_thread = threading.Thread(target=monitor_print_job, args=(hPrinter, hJob))
+        monitor_thread.start()
 
     except Exception as e:
         print(f"Ошибка при печати: {e}")
         traceback.print_exc()
+        print_complete_event.set()
 
     finally:
         # Закрываем дескриптор принтера
@@ -74,18 +108,19 @@ def print_file():
     # Удаляем временный файл
     os.remove(unique_filename)
 
-    # Проверяем успешность печати
-    if success:
-        result_message = 'Успешная печать'
-    else:
-        result_message = 'Ошибка при печати'
-
     # Возвращаем HTML-страницу с обновленным содержимым div и информацией о формате бумаги
-    return render_template('index.html', result_message=result_message, paper_size=paper_size)
+    return render_template('index.html', result_message="Печать начата", paper_size=paper_size)
 
 if __name__ == '__main__':
     # Открываем браузер с локальным хостом после запуска приложения
     webbrowser.open('http://127.0.0.1:5000/')
 
-    # Запускаем Flask-приложение
-    app.run(debug=True, use_reloader=False, threaded=True)
+    # Запускаем Flask-приложение в отдельном потоке
+    app_thread = threading.Thread(target=app.run, kwargs={'debug': True, 'use_reloader': False, 'threaded': True})
+    app_thread.start()
+
+    # Ждем, пока печать не завершится (или произошла бы ошибка)
+    print_complete_event.wait()
+
+    # Закрываем Flask-приложение
+    app_thread.join()
