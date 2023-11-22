@@ -6,10 +6,10 @@ import requests
 import hashlib
 import urllib.parse
 import threading
-import webbrowser
 import time
 from PyPDF2 import PdfReader
 import pywintypes
+import win32timezone
 
 app = Flask(__name__)
 print_complete_event = threading.Event()
@@ -20,31 +20,41 @@ def monitor_print_jobs(hPrinter, hJob):
     """
     while True:
         try:
-            # Получаем информацию о текущем задании
-            job_info = win32print.GetJob(hPrinter, hJob, 1)
+            # Получаем список заданий для принтера
+            jobs = win32print.EnumJobs(hPrinter, 0, -1, 2)
         except pywintypes.error as e:
-            # Если задание удалено, завершаем мониторинг
-            if e.winerror == 6:  # ERROR_INVALID_HANDLE
-                break
-            raise
+            # Если произошла ошибка, завершаем мониторинг
+            break
 
-        # Проверяем статус задания
-        status = job_info['Status']
-        if status == win32print.JOB_STATUS_COMPLETE:
-            print("Печать завершена успешно")
-            print_complete_event.set()
-            break
-        elif status == win32print.JOB_STATUS_ERROR:
-            print("Ошибка при печати")
-            print_complete_event.set()
-            break
-        elif status == win32print.JOB_STATUS_DELETED:
-            print("Задание удалено")
-            print_complete_event.set()
-            break
+        # Поиск задания с соответствующим дескриптором
+        current_job = next((job for job in jobs if job['JobId'] == hJob), None)
+
+        if current_job is not None:
+            # Логируем статус задания
+            print(f"Статус задания {hJob}: {current_job['Status']}")
+
+            # Добавьте дополнительные логи по необходимости
+
+            # Проверяем статус задания
+            if current_job['Status'] == win32print.JOB_STATUS_COMPLETE:
+                print("Печать завершена успешно")
+                print_complete_event.set()
+                break
+            elif current_job['Status'] == win32print.JOB_STATUS_ERROR:
+                print("Ошибка при печати")
+                break
+            elif current_job['Status'] == win32print.JOB_STATUS_DELETED:
+                print("Задание удалено")
+                break
+            elif current_job['Status'] == win32print.PRINTER_STATUS_PRINTING:
+                print("Принтер выполняет печать")
 
         # Пауза перед следующей проверкой статуса
         time.sleep(1)
+
+        # Пауза перед следующей проверкой статуса
+        time.sleep(1)
+
 
 @app.route('/')
 def index():
