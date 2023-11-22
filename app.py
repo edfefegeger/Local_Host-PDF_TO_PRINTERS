@@ -2,7 +2,6 @@ import traceback
 from flask import Flask, render_template, request
 import os
 import win32print
-import win32con
 import requests
 import hashlib
 import urllib.parse
@@ -10,39 +9,46 @@ import threading
 import webbrowser
 import time
 from PyPDF2 import PdfReader
+import pywintypes
 
 app = Flask(__name__)
 print_complete_event = threading.Event()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-def monitor_print_job(hPrinter, hJob):
+def monitor_print_jobs(hPrinter, hJob):
     """
     Мониторит статус печатного задания и дожидается его завершения.
     """
     while True:
-        # Получаем информацию о задании
-        job_info = win32print.GetJob(hPrinter, hJob, 2)
+        try:
+            # Получаем информацию о текущем задании
+            job_info = win32print.GetJob(hPrinter, hJob, 1)
+        except pywintypes.error as e:
+            # Если задание удалено, завершаем мониторинг
+            if e.winerror == 6:  # ERROR_INVALID_HANDLE
+                break
+            raise
 
         # Проверяем статус задания
         status = job_info['Status']
-        if status == win32con.JOB_STATUS_COMPLETE:
+        if status == win32print.JOB_STATUS_COMPLETE:
             print("Печать завершена успешно")
             print_complete_event.set()
             break
-        elif status == win32con.JOB_STATUS_ERROR:
+        elif status == win32print.JOB_STATUS_ERROR:
             print("Ошибка при печати")
             print_complete_event.set()
             break
-        elif status == win32con.JOB_STATUS_DELETED:
+        elif status == win32print.JOB_STATUS_DELETED:
             print("Задание удалено")
             print_complete_event.set()
             break
 
         # Пауза перед следующей проверкой статуса
         time.sleep(1)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/print', methods=['GET'])
 def print_file():
@@ -93,8 +99,11 @@ def print_file():
         win32print.EndDocPrinter(hPrinter)
 
         # Запускаем мониторинг печатного задания в отдельном потоке
-        monitor_thread = threading.Thread(target=monitor_print_job, args=(hPrinter, hJob))
+        monitor_thread = threading.Thread(target=monitor_print_jobs, args=(hPrinter, hJob))
         monitor_thread.start()
+
+        # Если код дошел до этого момента, считаем печать успешной
+        success = True
 
     except Exception as e:
         print(f"Ошибка при печати: {e}")
@@ -102,7 +111,7 @@ def print_file():
         print_complete_event.set()
 
     finally:
-        # Закрываем дескриптор принтера
+        # Закрываем дескриптор принтера в любом случае
         win32print.ClosePrinter(hPrinter)
 
     # Удаляем временный файл
