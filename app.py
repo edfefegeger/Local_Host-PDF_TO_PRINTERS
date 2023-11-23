@@ -52,9 +52,8 @@ def monitor_print_jobs(hPrinter, hJob):
         # Пауза перед следующей проверкой статуса
         time.sleep(1)
 
-        # Пауза перед следующей проверкой статуса
-        time.sleep(1)
-
+    # Закрытие принтера
+    win32print.ClosePrinter(hPrinter)
 
 @app.route('/')
 def index():
@@ -112,6 +111,9 @@ def print_file():
         monitor_thread = threading.Thread(target=monitor_print_jobs, args=(hPrinter, hJob))
         monitor_thread.start()
 
+        # Запускаем выполнение задания в очереди
+        win32print.ScheduleJob(hPrinter, 0)
+
         # Если код дошел до этого момента, считаем печать успешной
         success = True
 
@@ -127,7 +129,6 @@ def print_file():
     return render_template('index.html', result_message="Печать начата", paper_size=paper_size)
 
 if __name__ == '__main__':
-    
     # Запускаем Flask-приложение в отдельном потоке
     app_thread = threading.Thread(target=app.run, kwargs={'debug': True, 'use_reloader': False, 'threaded': True})
     app_thread.start()
