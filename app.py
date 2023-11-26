@@ -1,15 +1,14 @@
-import traceback
-from flask import Flask, render_template, request
-import os
-import win32printing
-import requests
 import hashlib
-import urllib.parse
-import tempfile
-import fitz  # PyMuPDF
-import win32timezone
+import os
+import requests
+import subprocess
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
+
+def print_pdf(file_path, printer_name):
+    sumatra_path = r'SumatraPDF\SumatraPDF.exe'
+    subprocess.run([sumatra_path, '-print-to', printer_name, file_path])
 
 @app.route('/')
 def index():
@@ -22,7 +21,7 @@ def print_file():
     printer_name = request.args.get('printer_name')
 
     sanitized_url = hashlib.sha256(file_url.encode()).hexdigest()
-    sanitized_url = urllib.parse.quote_plus(sanitized_url)
+    sanitized_url = sanitized_url[:10]
     unique_filename = f'temp_file_{sanitized_url}_size_{paper_size}.pdf'
 
     response = requests.get(file_url)
@@ -32,30 +31,15 @@ def print_file():
     success = False
 
     try:
-        # Open the printer
-        with win32printing.Printer(printer_name) as printer:
-            # Start a print job
-            printer.text(f"Printing file: {file_url}")
-
-            # Send the PDF content to the printer
-            with open(unique_filename, 'rb') as pdf_file:
-                # Using PyMuPDF to read the PDF content
-                pdf_document = fitz.open(pdf_file)
-                
-                for page_number in range(pdf_document.page_count):
-                    page = pdf_document.load_page(page_number)
-                    page_text = page.get_text()
-                    
-                    # Send the text to the printer
-                    printer.text(page_text)
-
+        print_pdf(unique_filename, printer_name)
         success = True
-
     except Exception as e:
         print(f"Error while printing: {e}")
-        traceback.print_exc()
+    finally:
+        # Удаление временного файла после завершения
+        os.remove(unique_filename)
 
-    return render_template('index.html', result_message="Printing initiated", paper_size=paper_size)
+    return render_template('index.html', result_message="Printing initiated", paper_size=paper_size, success=success)
 
 if __name__ == '__main__':
     app.run(debug=True)
