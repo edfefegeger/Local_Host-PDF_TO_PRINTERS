@@ -5,6 +5,25 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Print Request Form</title>
+    <script>
+        // Функция для загрузки списка принтеров при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            var printerSelect = document.getElementById('printer_name');
+            
+            // Запрос к серверу для получения списка принтеров
+            fetch('/get_printers')
+                .then(response => response.json())
+                .then(data => {
+                    // Заполняем выпадающий список принтеров
+                    data.printers.forEach(function(printer) {
+                        var option = document.createElement('option');
+                        option.value = printer;
+                        option.text = printer;
+                        printerSelect.add(option);
+                    });
+                });
+        });
+    </script>
 </head>
 <body>
     <h1>Форма запроса на печать</h1>
@@ -15,14 +34,13 @@
         <label for="paper_size">Размер бумаги:</label>
         <input type="text" id="paper_size" name="paper_size" required>
         <br>
-        <label for="printer_name">Имя принтера:</label>
-        <input type="text" id="printer_name" name="printer_name" required>
+        <label for="printer_name">Выберите принтер:</label>
+        <select id="printer_name" name="printer_name" required></select>
         <br>
         <input type="submit" value="Подать запрос на печать">
         <div id="print_result">Результат: {{ result_message }}
             <p>Формат бумаги: {{ paper_size }}</p>
         </div>
-        
     </form>
 </body>
 </html>

@@ -92,3 +92,8 @@ TimeOfLastUpdateCheck = 0 0
 OpenCountWeek = 673
 
 # Settings below are not recognized by the current version
+
+CustomPageSize = A5
+CustomPageSize = A5
+CustomPageSize = Letter
+CustomPageSize = A4
