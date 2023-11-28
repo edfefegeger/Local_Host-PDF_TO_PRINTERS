@@ -38,13 +38,10 @@
         <select id="printer_name" name="printer_name" required></select>
         <br>
         <label for="page_orientation">Ориентация страницы:</label>
- 
         <select id="page_orientation" name="page_orientation" required>
-    <option value="portrait">Книжная</option>
-    <option value="landscape">Альбомная</option>
-</select>
-        
-
+            <option value="portrait">Книжная</option>
+            <option value="landscape">Альбомная</option>
+        </select>
         <br>
         <input type="submit" value="Подать запрос на печать">
         <div id="print_result">Результат: {{ result_message }}
