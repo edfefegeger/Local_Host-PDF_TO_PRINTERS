@@ -29,10 +29,11 @@ def print_file():
     file_url = request.args.get('file_url')
     paper_size = request.args.get('paper_size')
     printer_name = request.args.get('printer_name')
+    page_orientation = request.args.get('page_orientation', 'portrait')  # По умолчанию 'portrait', если параметр не передан
 
     sanitized_url = hashlib.sha256(file_url.encode()).hexdigest()
     sanitized_url = sanitized_url[:10]
-    unique_filename = f'temp_file_{sanitized_url}_size_{paper_size}.pdf'
+    unique_filename = f'temp_file_{sanitized_url}_size_{paper_size}_orientation_{page_orientation}.pdf'
 
     response = requests.get(file_url)
     with open(unique_filename, 'wb') as f:
@@ -41,11 +42,11 @@ def print_file():
     # Указать путь к файлу SumatraPDF-settings.txt
     sumatra_settings_path = os.path.join(os.path.dirname('SumatraPDF\SumatraPDF.exe'), 'SumatraPDF-settings.txt')
 
-
     success = False
 
     try:
-        set_sumatra_paper_size(sumatra_settings_path, paper_size)
+        # Добавить размер бумаги и ориентацию к параметрам
+        set_sumatra_paper_size(sumatra_settings_path, f'{paper_size} {page_orientation}')
         print_pdf(unique_filename, printer_name)
         success = True
     except Exception as e:
@@ -54,6 +55,7 @@ def print_file():
         os.remove(unique_filename)
 
     return render_template('index.html', result_message="Printing initiated", paper_size=paper_size, success=success)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
