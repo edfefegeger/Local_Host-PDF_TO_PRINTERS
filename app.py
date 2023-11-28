@@ -2,9 +2,12 @@ import hashlib
 import os
 import requests
 import subprocess
+import threading
 from flask import Flask, render_template, request
 from flask import jsonify
 import win32print
+from pystray import Icon, Menu, MenuItem
+from PIL import Image
 
 app = Flask(__name__)
 
@@ -21,6 +24,19 @@ def print_pdf(file_path, printer_name, paper_size, page_orientation):
 
     subprocess.run(command_line)
 
+def on_exit(icon, item):
+    icon.stop()
+
+def create_menu():
+    menu = (Menu(MenuItem('Exit', on_exit)))
+    return menu
+
+def run_systray():
+    image = Image.open("zoo_ecosystem_exotic_wildlife_wild_animal_fauna_nature_shark_icon_259313.ico")
+    menu = create_menu()
+    icon = Icon("name", image, menu=menu)
+    icon.run()
+
 @app.route('/get_printers')
 def get_printers():
     printers = [printer[2] for printer in win32print.EnumPrinters(2)]
@@ -35,7 +51,7 @@ def print_file():
     file_url = request.args.get('file_url')
     paper_size = request.args.get('paper_size')
     printer_name = request.args.get('printer_name')
-    page_orientation = request.args.get('page_orientation', 'portrait')  # По умолчанию 'portrait', если параметр не передан
+    page_orientation = request.args.get('page_orientation')  # По умолчанию 'portrait', если параметр не передан
 
     sanitized_url = hashlib.sha256(file_url.encode()).hexdigest()
     sanitized_url = sanitized_url[:10]
@@ -58,4 +74,9 @@ def print_file():
     return render_template('index.html', result_message="Printing initiated", paper_size=paper_size, success=success)
 
 if __name__ == '__main__':
+    # Запускаем Systray в отдельном потоке
+    systray_thread = threading.Thread(target=run_systray)
+    systray_thread.start()
+
+    # Запускаем Flask в основном потоке
     app.run(debug=True)
